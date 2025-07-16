@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <!-- Include the CesiumJS JavaScript and CSS files -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="./useVIdeo.js"></script>
+  <style>
+    html,
+    body,
+    #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <script type="module">
+    // Your access token can be found at: https://ion.cesium.com/tokens.
+    // This is the default access token from your ion account
+    var defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmMTVjYzVlYS1kYjM3LTQwZWItOGQ0Ny0yMTQ5NDljNDg4YWQiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE2Mzh9.ojr6fc_Fiy-fYNYOSUuE1IbGGHnQ1tOJRRI1TX90VrU";
+
+    Cesium.Ion.defaultAccessToken = defaultAccessToken;
+
+    // 性能优化配置
+    const viewerOptions = {
+      baseLayerPicker: false,        // 禁用底图选择器
+      geocoder: false,              // 禁用地理编码器
+      homeButton: false,            // 禁用home按钮
+      sceneModePicker: false,       // 禁用场景模式选择器
+      navigationHelpButton: false,  // 禁用帮助按钮
+      animation: false,             // 禁用动画控件
+      timeline: false,              // 禁用时间线控件
+      fullscreenButton: false,      // 禁用全屏按钮
+      infoBox: false,               // 禁用信息框
+      selectionIndicator: false,    // 禁用选择指示器
+      shadows: false,               // 禁用阴影
+      shouldAnimate: false,         // 禁用自动动画
+      targetFrameRate: 30           // 限制帧率
+    };
+
+    // 初始化Cesium查看器
+    const viewer = new Cesium.Viewer('cesiumContainer', viewerOptions);
+
+    // 优化渲染性能
+    viewer.scene.fog.enabled = false;                      // 禁用雾效果
+    viewer.scene.globe.maximumScreenSpaceError = 2.5;      // 增大错误阈值，降低细节
+    viewer.scene.logarithmicDepthBuffer = true;            // 启用对数深度缓冲
+    viewer.resolutionScale = window.devicePixelRatio > 1 ? 1.0 : 1.0; // 调整分辨率
+
+    // 限制缩放范围
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000; // 最大缩放距离
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1000;    // 最小缩放距离
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(121.5737, 30.92304, 50000),
+      orientation: {
+        heading: Cesium.Math.toRadians(0.0),
+        pitch: Cesium.Math.toRadians(-45.0), // 负值为俯视角度
+        roll: 0
+      }
+    });
+    // 创建一个多边形面
+    const polygon = viewer.entities.add({
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray([
+          121.3737, 31.2304,  // 左下角
+          121.737, 31.2304,   // 右下角
+          121.737, 31.4304,   // 右上角
+          121.3737, 31.4304,  // 左上角
+        ])),
+        material: Cesium.Color.RED.withAlpha(0.5),
+        height: 0,
+        outline: true,
+        outlineColor: Cesium.Color.BLACK
+      }
+    });
+    // 把MP4 加载到 polygon 上去
+    const video = document.createElement('video');
+    video.src = './mov_bbb.mp4';
+    // 设置视频质量
+    video.width = 1920;  // 设置较高的分辨率
+    video.height = 1080;
+    // 设置视频质量属性
+    video.quality = "high";
+    // 如果浏览器支持，设置播放品质
+    if (video.canPlayType) {
+      video.playbackQuality = "high";
+    }
+    // 静音
+    video.muted = true;
+    video.loop = true;
+    // 提高视频比特率（通过设置播放速率为正常来确保视频质量）
+    video.playbackRate = 1.0;
+    video.play();
+    polygon.polygon.material = new Cesium.ImageMaterialProperty({
+      image: video,
+      transparent: true,
+      color: Cesium.Color.WHITE.withAlpha(1.0)  // 设置为不透明以保持清晰度
+    });
+  </script>
+  </div>
+</body>
+
+</html>

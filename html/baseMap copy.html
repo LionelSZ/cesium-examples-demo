@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CesiumJS 3D地图</title>
+
+  <!-- CesiumJS CSS -->
+  <link href="./Cesium-1.119/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <style>
+    html,
+    body,
+    #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+    }
+
+    /* 自定义控制面板 */
+    .control-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(42, 42, 42, 0.8);
+      padding: 15px;
+      border-radius: 5px;
+      color: white;
+      min-width: 200px;
+      z-index: 1000;
+    }
+
+    .control-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #48b;
+    }
+
+    .control-panel button {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: #48b;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .control-panel button:hover {
+      background: #369;
+    }
+
+    .control-panel select {
+      width: 100%;
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 3px;
+      border: none;
+    }
+
+    /* 状态信息 */
+    .status-info {
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      z-index: 1000;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Cesium容器 -->
+  <div id="cesiumContainer"></div>
+
+  <!-- 控制面板 -->
+  <div class="control-panel">
+    <button onclick="flyToBeijing()">飞到北京</button>
+    <button onclick="flyToShanghai()">飞到上海</button>
+    <button onclick="flyToWorld()">回到全球视图</button>
+    <button onclick="add3DBuildings()">添加3D建筑</button>
+  </div>
+
+  <!-- 状态信息 -->
+  <div class="status-info" id="statusInfo">
+    <div>经度: <span id="longitude">--</span>°</div>
+    <div>纬度: <span id="latitude">--</span>°</div>
+    <div>高度: <span id="height">--</span> 米</div>
+    <div>帧率: <span id="fps">--</span> FPS</div>
+  </div>
+
+  <!-- CesiumJS JavaScript -->
+  <script src="./Cesium-1.119/Build/Cesium/Cesium.js"></script>
+
+  <script>
+    // 设置Cesium Ion访问令牌（可选，用于访问Cesium Ion资源）
+    var defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmMTVjYzVlYS1kYjM3LTQwZWItOGQ0Ny0yMTQ5NDljNDg4YWQiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE2Mzh9.ojr6fc_Fiy-fYNYOSUuE1IbGGHnQ1tOJRRI1TX90VrU";
+    // Cesium.ArcGisMapService.defaultAccessToken
+    Cesium.Ion.defaultAccessToken = defaultAccessToken;
+
+    // 初始化Cesium Viewer
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      // baseLayer: Cesium.ImageryLayer.fromProviderAsync(
+      //   // Cesium.ArcGisMapServerImageryProvider.fromUrl(
+      //   //   "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer"
+      //   // )
+      //   Cesium.ArcGisMapServerImageryProvider.fromUrl(
+      //     "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer?f=pjson"
+      //   )
+      // ),
+
+      // 界面配置
+      // homeButton: true,
+      // sceneModePicker: true,
+      // baseLayerPicker: false,
+      // navigationHelpButton: true,
+      // animation: true,
+      // timeline: true,
+      // fullscreenButton: true,
+      // geocoder: true,
+
+      // 场景配置
+      // scene3DOnly: false,
+      // orderIndependentTranslucency: false,
+      // contextOptions: {
+      //   webgl: {
+      //     alpha: false,
+      //     depth: true,
+      //     stencil: false,
+      //     antialias: true,
+      //     premultipliedAlpha: true,
+      //     preserveDrawingBuffer: false,
+      //     failIfMajorPerformanceCaveat: false
+      //   }
+      // }
+    });
+    // add layer
+    // const addLayer = async () => {
+    //   const imageryLayer = viewer.imageryLayers.addImageryProvider(
+    //     await Cesium.IonImageryProvider.fromAssetId(4)
+    //   );
+    // }
+    // addLayer()
+
+    // 移除Cesium Logo（可选）
+    viewer.cesiumWidget.creditContainer.style.display = "none";
+
+    // 设置初始视角到中国
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(116.4, 39.9, 15000000), // 北京上空
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-90),
+        roll: 0.0
+      }
+    });
+
+    // 启用深度测试
+    // viewer.scene.globe.depthTestAgainstTerrain = true;
+
+    // // 设置大气效果
+    // viewer.scene.skyAtmosphere.show = true;
+    // viewer.scene.fog.enabled = true;
+    // viewer.scene.fog.density = 0.0001;
+
+    // 全局变量
+    let buildingsAdded = false;
+
+    // 飞行到北京
+    function flyToBeijing() {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(116.4074, 39.9042, 50000),
+        duration: 3.0
+      });
+    }
+
+    // 飞行到上海
+    function flyToShanghai() {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(121.4737, 31.2304, 50000),
+        duration: 3.0
+      });
+    }
+
+    // 回到全球视图
+    function flyToWorld() {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(116.4, 39.9, 15000000),
+        duration: 3.0
+      });
+    }
+
+
+    // 添加3D建筑
+    function add3DBuildings() {
+      if (!buildingsAdded) {
+        try {
+          const osmBuildings = viewer.scene.primitives.add(
+            new Cesium.Cesium3DTileset({
+              url: Cesium.IonResource.fromAssetId(96188) // OSM Buildings
+            })
+          );
+          buildingsAdded = true;
+          console.log('3D建筑已添加');
+        } catch (error) {
+          console.log('添加3D建筑需要Cesium Ion访问令牌');
+        }
+      }
+    }
+
+
+    // 鼠标位置和高度显示
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function (event) {
+      const cartesian = viewer.camera.pickEllipsoid(event.endPosition, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+        const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+
+        document.getElementById('longitude').textContent = longitude;
+        document.getElementById('latitude').textContent = latitude;
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+    // 相机高度显示
+    viewer.camera.changed.addEventListener(function () {
+      const height = Math.round(viewer.camera.positionCartographic.height);
+      document.getElementById('height').textContent = height.toLocaleString();
+    });
+
+    // FPS显示
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    viewer.scene.postRender.addEventListener(function () {
+      frameCount++;
+      const currentTime = performance.now();
+
+      if (currentTime - lastTime >= 1000) {
+        const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+        document.getElementById('fps').textContent = fps;
+        frameCount = 0;
+        lastTime = currentTime;
+      }
+    });
+
+    // 错误处理
+    viewer.scene.renderError.addEventListener(function (scene, error) {
+      console.error('渲染错误:', error);
+    });
+
+    console.log('CesiumJS地图初始化完成！');
+    console.log('Cesium版本:', Cesium.VERSION);
+
+    // 添加一个简单的测试点来验证地图是否正常工作
+    try {
+      const testEntity = viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(116.4074, 39.9042, 1000),
+        point: {
+          pixelSize: 10,
+          color: Cesium.Color.YELLOW,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 2,
+          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+        },
+        label: {
+          text: '北京测试点',
+          font: '14pt sans-serif',
+          fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 2,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset: new Cesium.Cartesian2(0, -40)
+        }
+      });
+      console.log('测试点添加成功');
+    } catch (e) {
+      console.error('添加测试点失败:', e);
+    }
+
+    // 监听地图加载完成事件
+    viewer.scene.globe.tileLoadProgressEvent.addEventListener(function (queuedTileCount) {
+      if (queuedTileCount === 0) {
+        console.log('地图瓦片加载完成');
+      }
+    });
+  </script>
+</body>
+
+</html>

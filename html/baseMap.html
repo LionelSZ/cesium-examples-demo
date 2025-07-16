@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <!-- Include the CesiumJS JavaScript and CSS files -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="./useVIdeo.js"></script>
+  <script src="./useVIdeo2.js"></script>
+  <style>
+    html,
+    body,
+    #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <script type="module">
+    // Your access token can be found at: https://ion.cesium.com/tokens.
+    // This is the default access token from your ion account
+    var defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmMTVjYzVlYS1kYjM3LTQwZWItOGQ0Ny0yMTQ5NDljNDg4YWQiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE2Mzh9.ojr6fc_Fiy-fYNYOSUuE1IbGGHnQ1tOJRRI1TX90VrU";
+
+    Cesium.Ion.defaultAccessToken = defaultAccessToken;
+
+    // 性能优化配置
+    const viewerOptions = {
+      // 使用限制细节级别的地形
+      // terrainProvider: Cesium.createWorldTerrain({
+      //   requestVertexNormals: false, // 不请求法线
+      //   requestWaterMask: false     // 不请求水面掩码
+      // }),
+      baseLayerPicker: false,        // 禁用底图选择器
+      geocoder: false,              // 禁用地理编码器
+      homeButton: false,            // 禁用home按钮
+      sceneModePicker: false,       // 禁用场景模式选择器
+      navigationHelpButton: false,  // 禁用帮助按钮
+      animation: false,             // 禁用动画控件
+      timeline: false,              // 禁用时间线控件
+      fullscreenButton: false,      // 禁用全屏按钮
+      infoBox: false,               // 禁用信息框
+      selectionIndicator: false,    // 禁用选择指示器
+      shadows: false,               // 禁用阴影
+      shouldAnimate: false,         // 禁用自动动画
+      targetFrameRate: 30           // 限制帧率
+    };
+
+    // 初始化Cesium查看器
+    const viewer = new Cesium.Viewer('cesiumContainer', viewerOptions);
+
+    // 优化渲染性能
+    viewer.scene.fog.enabled = false;                      // 禁用雾效果
+    viewer.scene.globe.maximumScreenSpaceError = 2.5;      // 增大错误阈值，降低细节
+    viewer.scene.logarithmicDepthBuffer = true;            // 启用对数深度缓冲
+    viewer.resolutionScale = window.devicePixelRatio > 1 ? 1.0 : 1.0; // 调整分辨率
+
+    // 限制缩放范围
+    // viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000; // 最大缩放距离
+    // viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1000;    // 最小缩放距离
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(121.5737, 30.92304, 50000),
+      orientation: {
+        heading: Cesium.Math.toRadians(0.0), // 朝向角度
+        pitch: Cesium.Math.toRadians(-45.0), // 俯仰角度
+        roll: 0 // 翻滚角度
+      }
+    });
+
+    // 懒加载建筑物，只在用户放大到一定程度时加载
+    let buildingTileset = null;
+    let buildingsLoaded = false;
+
+
+    // 定义矩形底部中心点
+    const centerPosition = Cesium.Cartographic.fromDegrees(121.5737, 30.92304)
+
+
+    // 创建一个面
+    // const rectangle = viewer.entities.add({
+    //   rectangle: {
+    //     coordinates: Cesium.Rectangle.fromDegrees(
+    //       121.4737, 31.2304,
+    //       121.737, 31.4304,
+    //     ),
+    //     material: Cesium.Color.RED.withAlpha(0.5)
+    //   }
+    // });
+    // createVideoPolygon({
+    //   viewer: viewer,
+    //   m3u8Url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    //   centerLongitude: 121.5737, // 中心点经度
+    //   centerLatitude: 31.2304, // 中心点纬度
+    //   width: 2000,
+    //   length: 1000,
+    //   height: 1000,
+    //   heading: 0,
+    //   alpha: 1
+    // });
+    // createStableVideoPolygon({
+    //   viewer: viewer,
+    //   m3u8Url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    //   positions: [
+    //     121.3737, 31.2304,  // 左下角
+    //     121.737, 31.2304,   // 右下角
+    //     121.737, 31.4304,   // 右上角
+    //     121.3737, 31.4304,  // 左上角
+    //   ],
+    //   alpha: 0.8
+    // });
+
+
+    // // 监听地图加载完成事件
+    // viewer.scene.globe.tileLoadProgressEvent.addEventListener(function (queuedTileCount) {
+    //   if (queuedTileCount === 0) {
+    //     console.log('地图瓦片加载完成');
+    //   }
+    // });
+
+
+    // 鼠标位置和高度显示
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function (event) {
+      const cartesian = viewer.camera.pickEllipsoid(event.endPosition, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+        const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+        console.log(longitude, latitude);
+      }
+      // }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  </script>
+  </div>
+</body>
+
+</html>
