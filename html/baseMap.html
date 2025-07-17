@@ -21,16 +21,115 @@
       overflow: hidden;
       font-family: 'Microsoft YaHei', Arial, sans-serif;
     }
+
+
+    /* 自定义控制面板 */
+    .control-panel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(42, 42, 42, 0.8);
+      padding: 15px;
+      border-radius: 5px;
+      color: white;
+      min-width: 200px;
+      z-index: 1000;
+    }
+
+    /* 自定义控制面板 */
+    .right-control-panel {
+      position: absolute;
+      left: auto;
+      top: 10px;
+      right: 10px;
+      background: rgba(42, 42, 42, 0.8);
+      padding: 15px;
+      border-radius: 5px;
+      color: white;
+      min-width: 200px;
+      z-index: 1000;
+    }
+
+    .control-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #48b;
+    }
+
+    .control-panel button {
+      display: block;
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: #48b;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .control-panel button:hover {
+      background: #369;
+    }
+
+    .control-panel select {
+      width: 100%;
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 3px;
+      border: none;
+    }
+
+    /* 状态信息 */
+    .status-info {
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      z-index: 1000;
+    }
   </style>
 </head>
 
 <body>
   <div id="cesiumContainer"></div>
+
+  <!-- 控制面板 -->
+  <div class="control-panel">
+    <button onclick="flyToBeijing()">飞到北京</button>
+    <button onclick="flyToShanghai()">飞到上海</button>
+    <button onclick="flyToVideo()">查看监控点</button>
+    <button onclick="flyToWorld()">回到全球视图</button>
+  </div>
+  <!-- 控制面板 -->
+  <div class="control-panel right-control-panel">
+    <button onclick="changePolygon()">改变polygonEntity</button>
+    <button onclick="getDistance()">获取监控点宽高</button>
+    <button onclick="closeVideo()">关闭监控</button>
+  </div>
+
+
+  <!-- 状态信息 -->
+  <div class="status-info" id="statusInfo">
+    <div>经度: <span id="longitude">--</span>°</div>
+    <div>纬度: <span id="latitude">--</span>°</div>
+    <div>高度: <span id="height">--</span> 米</div>
+    <div>帧率: <span id="fps">--</span> FPS</div>
+  </div>
+
+
   <script type="module">
     // Your access token can be found at: https://ion.cesium.com/tokens.
     // This is the default access token from your ion account
-    var defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmMTVjYzVlYS1kYjM3LTQwZWItOGQ0Ny0yMTQ5NDljNDg4YWQiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE2Mzh9.ojr6fc_Fiy-fYNYOSUuE1IbGGHnQ1tOJRRI1TX90VrU";
+    // Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmMTVjYzVlYS1kYjM3LTQwZWItOGQ0Ny0yMTQ5NDljNDg4YWQiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE2Mzh9.ojr6fc_Fiy-fYNYOSUuE1IbGGHnQ1tOJRRI1TX90VrU';
 
+    // var defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4NmI5ZGM5NS04Zjg1LTQ2Y2YtYjQxYS1kNjE0ODY5MDc3YjUiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE3ODR9.Ugijc1EysEj3ZuPU02AtA2Vomi4QpLSoyQ2EIcuNMbA";
+    var defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4NmI5ZGM5NS04Zjg1LTQ2Y2YtYjQxYS1kNjE0ODY5MDc3YjUiLCJpZCI6MTE2NjgzLCJpYXQiOjE2Njk4NjE3ODR9.Ugijc1EysEj3ZuPU02AtA2Vomi4QpLSoyQ2EIcuNMbA"
     Cesium.Ion.defaultAccessToken = defaultAccessToken;
 
     // 性能优化配置
@@ -52,11 +151,12 @@
       selectionIndicator: false,    // 禁用选择指示器
       shadows: false,               // 禁用阴影
       shouldAnimate: false,         // 禁用自动动画
-      targetFrameRate: 30           // 限制帧率
+      targetFrameRate: 60           // 限制帧率
     };
 
     // 初始化Cesium查看器
     const viewer = new Cesium.Viewer('cesiumContainer', viewerOptions);
+    window.viewer = viewer;
 
     // 优化渲染性能
     viewer.scene.fog.enabled = false;                      // 禁用雾效果
@@ -67,22 +167,31 @@
     // 限制缩放范围
     // viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000; // 最大缩放距离
     // viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1000;    // 最小缩放距离
+    // viewer.camera.setView({
+    //   destination: Cesium.Cartesian3.fromDegrees(121.5737, 30.92304, 50000),
+    //   orientation: {
+    //     heading: Cesium.Math.toRadians(0.0), // 朝向角度
+    //     pitch: Cesium.Math.toRadians(-45.0), // 俯仰角度
+    //     roll: 0 // 翻滚角度
+    //   }
+    // });
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(121.5737, 30.92304, 50000),
-      orientation: {
-        heading: Cesium.Math.toRadians(0.0), // 朝向角度
-        pitch: Cesium.Math.toRadians(-45.0), // 俯仰角度
-        roll: 0 // 翻滚角度
-      }
+      // destination: Cesium.Cartesian3.fromDegrees(121.387039, 31.247284, 20),
+      destination: Cesium.Cartesian3.fromDegrees(116.4, 39.9, 15000000),
     });
 
-    // 懒加载建筑物，只在用户放大到一定程度时加载
-    let buildingTileset = null;
-    let buildingsLoaded = false;
+    const osmBuildingsTileset = await Cesium.createOsmBuildingsAsync();
+    console.log(osmBuildingsTileset);
+    viewer.scene.primitives.add(osmBuildingsTileset);
+
+    // viewer.scene.setTerrain(
+    //   new Cesium.Terrain(
+    //     Cesium.CesiumTerrainProvider.fromIonAssetId(1),
+    //   ),
+    // );
 
 
-    // 定义矩形底部中心点
-    const centerPosition = Cesium.Cartographic.fromDegrees(121.5737, 30.92304)
+
 
 
     // 创建一个面
@@ -127,6 +236,8 @@
     // });
 
 
+
+
     // 鼠标位置和高度显示
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(function (event) {
@@ -135,11 +246,51 @@
         const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
         const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
         const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
-        console.log(longitude, latitude);
+
+        document.getElementById('longitude').textContent = longitude;
+        document.getElementById('latitude').textContent = latitude;
       }
-      // }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+    // 相机高度显示
+    viewer.camera.changed.addEventListener(function () {
+      const height = Math.round(viewer.camera.positionCartographic.height);
+      document.getElementById('height').textContent = height.toLocaleString();
+    });
+
+    // FPS显示
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    viewer.scene.postRender.addEventListener(function () {
+      frameCount++;
+      const currentTime = performance.now();
+
+      if (currentTime - lastTime >= 1000) {
+        const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+        document.getElementById('fps').textContent = fps;
+        frameCount = 0;
+        lastTime = currentTime;
+      }
+    });
+
+    // 点击位置获取经纬度信息
+    handler.setInputAction(function (event) {
+      const cartesian = viewer.scene.pickPosition(event.position);
+      if (cartesian) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+        const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+        const height = cartographic.height.toFixed(2);
+
+        // console.log(`点击位置: 经度=${longitude}, 纬度=${latitude}, 高度=${height}米`);
+        console.log([longitude, latitude, height]);
+
+      }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
   </script>
+  <script src="./utils/positions.js"></script>
+  <script src="./utils/index.js"></script>
   </div>
 </body>
 
